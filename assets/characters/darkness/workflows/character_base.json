@@ -1,0 +1,68 @@
+{
+  "workflow_name": "character_base",
+  "description": "Generates the canonical Darkness character with locked seed and settings. Use for creating the base reference images.",
+  "nodes": {
+    "loader": {
+      "type": "UNETLoader",
+      "config": {
+        "unet_name": "anima-base-v1.0.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "clip": {
+      "type": "CLIPLoader",
+      "config": {
+        "clip_name": "qwen_3_06b_base.safetensors",
+        "type": "qwen_image",
+        "device": "default"
+      }
+    },
+    "vae": {
+      "type": "VAELoader",
+      "config": {
+        "vae_name": "qwen_image_vae.safetensors"
+      }
+    },
+    "positive_prompt": {
+      "type": "CLIPTextEncode",
+      "config": {
+        "text": "1girl, solo, Darkness from Konosuba, blonde hair, blue eyes, silver crusader armor with gold trim, black plate armor, shoulder pauldrons, holding a greatsword, gentle smile, bright fantasy throne room, tall stained glass windows, sunlight streaming in, marble floor, golden decorations, vibrant colors, masterpiece, best quality, highly detailed"
+      }
+    },
+    "negative_prompt": {
+      "type": "CLIPTextEncode",
+      "config": {
+        "text": "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry, deformed, ugly"
+      }
+    },
+    "latent": {
+      "type": "EmptySD3LatentImage",
+      "config": {
+        "width": 1024,
+        "height": 1024,
+        "batch_size": 1
+      }
+    },
+    "sampler": {
+      "type": "KSampler",
+      "config": {
+        "seed": 742860285903037,
+        "steps": 38,
+        "cfg": 4.5,
+        "sampler_name": "dpmpp_2m",
+        "scheduler": "simple",
+        "denoise": 1.0
+      }
+    },
+    "shift": {
+      "type": "ModelSamplingAuraFlow",
+      "config": {
+        "shift": 3.0
+      }
+    }
+  },
+  "output": {
+    "filename_prefix": "darkness_base",
+    "format": "png"
+  }
+}

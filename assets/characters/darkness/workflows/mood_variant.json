@@ -1,0 +1,83 @@
+{
+  "workflow_name": "mood_variant",
+  "description": "Takes the character base and applies a mood-specific prompt modifier. Only the mood elements change — character identity stays locked.",
+  "parameters": {
+    "mood": {
+      "type": "string",
+      "description": "Mood name (idle, happy, hungry, sick, sleeping, angry, sad, excited, bored, evolving)"
+    },
+    "mood_prompt": {
+      "type": "string",
+      "description": "Additional prompt elements for this mood (see character-anchors.md)"
+    },
+    "seed_offset": {
+      "type": "integer",
+      "default": 0,
+      "description": "Offset from base seed (742860285903037) for slight variation"
+    }
+  },
+  "nodes": {
+    "loader": {
+      "type": "UNETLoader",
+      "config": {
+        "unet_name": "anima-base-v1.0.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "clip": {
+      "type": "CLIPLoader",
+      "config": {
+        "clip_name": "qwen_3_06b_base.safetensors",
+        "type": "qwen_image",
+        "device": "default"
+      }
+    },
+    "vae": {
+      "type": "VAELoader",
+      "config": {
+        "vae_name": "qwen_image_vae.safetensors"
+      }
+    },
+    "positive_prompt": {
+      "type": "CLIPTextEncode",
+      "config": {
+        "text": "1girl, solo, Darkness from Konosuba, blonde hair, blue eyes, silver crusader armor with gold trim, black plate armor, shoulder pauldrons, holding a greatsword, {mood_prompt}, masterpiece, best quality, highly detailed, vibrant colors, bright lighting"
+      }
+    },
+    "negative_prompt": {
+      "type": "CLIPTextEncode",
+      "config": {
+        "text": "lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, jpeg artifacts, signature, watermark, username, blurry, deformed, ugly"
+      }
+    },
+    "latent": {
+      "type": "EmptySD3LatentImage",
+      "config": {
+        "width": 1024,
+        "height": 1024,
+        "batch_size": 1
+      }
+    },
+    "sampler": {
+      "type": "KSampler",
+      "config": {
+        "seed": "742860285903037 + {seed_offset}",
+        "steps": 38,
+        "cfg": 4.5,
+        "sampler_name": "dpmpp_2m",
+        "scheduler": "simple",
+        "denoise": 1.0
+      }
+    },
+    "shift": {
+      "type": "ModelSamplingAuraFlow",
+      "config": {
+        "shift": 3.0
+      }
+    }
+  },
+  "output": {
+    "filename_prefix": "darkness_{mood}",
+    "format": "png"
+  }
+}
