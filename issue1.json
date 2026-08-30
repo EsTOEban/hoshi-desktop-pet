@@ -1,0 +1,86 @@
+{
+  "url": "https://api.github.com/repos/EsTOEban/hoshi-desktop-pet/issues/1",
+  "repository_url": "https://api.github.com/repos/EsTOEban/hoshi-desktop-pet",
+  "labels_url": "https://api.github.com/repos/EsTOEban/hoshi-desktop-pet/issues/1/labels{/name}",
+  "comments_url": "https://api.github.com/repos/EsTOEban/hoshi-desktop-pet/issues/1/comments",
+  "events_url": "https://api.github.com/repos/EsTOEban/hoshi-desktop-pet/issues/1/events",
+  "html_url": "https://github.com/EsTOEban/hoshi-desktop-pet/issues/1",
+  "id": 5290360241,
+  "node_id": "I_kwDOUHynd88AAAABO1R9sQ",
+  "number": 1,
+  "title": "[Spec] Define core architecture",
+  "user": {
+    "login": "EsTOEban",
+    "id": 7810190,
+    "node_id": "MDQ6VXNlcjc4MTAxOTA=",
+    "avatar_url": "https://avatars.githubusercontent.com/u/7810190?v=4",
+    "gravatar_id": "",
+    "url": "https://api.github.com/users/EsTOEban",
+    "html_url": "https://github.com/EsTOEban",
+    "followers_url": "https://api.github.com/users/EsTOEban/followers",
+    "following_url": "https://api.github.com/users/EsTOEban/following{/other_user}",
+    "gists_url": "https://api.github.com/users/EsTOEban/gists{/gist_id}",
+    "starred_url": "https://api.github.com/users/EsTOEban/starred{/owner}{/repo}",
+    "subscriptions_url": "https://api.github.com/users/EsTOEban/subscriptions",
+    "organizations_url": "https://api.github.com/users/EsTOEban/orgs",
+    "repos_url": "https://api.github.com/users/EsTOEban/repos",
+    "events_url": "https://api.github.com/users/EsTOEban/events{/privacy}",
+    "received_events_url": "https://api.github.com/users/EsTOEban/received_events",
+    "type": "User",
+    "user_view_type": "public",
+    "site_admin": false
+  },
+  "labels": [
+    {
+      "id": 11994984895,
+      "node_id": "LA_kwDOUHynd88AAAACyvTxvw",
+      "url": "https://api.github.com/repos/EsTOEban/hoshi-desktop-pet/labels/enhancement",
+      "name": "enhancement",
+      "color": "a2eeef",
+      "default": true,
+      "description": "New feature or request"
+    }
+  ],
+  "state": "open",
+  "locked": false,
+  "assignees": [
+
+  ],
+  "milestone": null,
+  "comments": 0,
+  "created_at": "2026-08-30T04:33:48Z",
+  "updated_at": "2026-08-30T17:01:48Z",
+  "closed_at": null,
+  "assignee": null,
+  "author_association": "OWNER",
+  "active_lock_reason": null,
+  "sub_issues_summary": {
+    "total": 0,
+    "completed": 0,
+    "percent_completed": 0
+  },
+  "issue_dependencies_summary": {
+    "blocked_by": 0,
+    "total_blocked_by": 0,
+    "blocking": 0,
+    "total_blocking": 0
+  },
+  "body": "## Overview\n\nDefine the core architecture for the Hoshi desktop pet application. This is the foundational layer that all other features build upon — the module boundaries, data flow, and structural decisions that keep the codebase maintainable as features accumulate.\n\n## Requirements\n\n### Module Structure\n\n- [ ] Define a clear separation between **main process** (Electron backend, system tray, file I/O, state persistence) and **renderer process** (UI, animations, user interaction)\n- [ ] Define a **shared** module for types, constants, and utilities used by both processes\n- [ ] Define a **state management** layer that owns the single source of truth for pet state (mood, needs, stats)\n- [ ] Define an **IPC communication layer** with typed message contracts between main and renderer\n- [ ] Define a **plugin/extension architecture** for future features (minigames, seasonal events, etc.)\n\n### Data Flow\n\n- [ ] Unidirectional data flow: state changes originate in the state manager, propagate to renderer via IPC, renderer renders\n- [ ] No direct renderer-to-renderer or main-to-main communication bypassing the state manager\n- [ ] All state mutations go through a single `dispatch` function (action → reducer → new state → notify subscribers)\n\n### File Organization\n\n- [ ] `src/main/` — Electron main process (app lifecycle, tray, window, IPC handlers, storage)\n- [ ] `src/renderer/` — Electron renderer process (UI components, animations, interaction handlers)\n- [ ] `src/shared/` — Shared types, constants, utilities, IPC contracts\n- [ ] `src/state/` — State management (reducer, actions, selectors, middleware)\n- [ ] `tests/` — Unit and integration tests mirroring `src/` structure\n- [ ] `docs/` — Architecture decision records, coding standards, feature specs\n\n### Technology Choices\n\n- [ ] Document why Electron (cross-platform, web tech, system tray, transparent windows)\n- [ ] Document TypeScript choice (type safety across IPC boundary, Google style guide alignment)\n- [ ] Document state management approach (lightweight reducer pattern vs. Redux/Zustand — pick one and justify)\n- [ ] Document testing framework (Vitest for unit, Playwright for e2e)\n\n## Acceptance Criteria\n\n- [ ] `docs/architecture.md` exists with module diagram, data flow diagram, and technology justification\n- [ ] `src/` directory structure created with placeholder files for each module\n- [ ] `src/shared/types.ts` — Core TypeScript interfaces for Pet, Mood, Needs, State\n- [ ] `src/shared/ipc-contracts.ts` — Typed IPC message definitions\n- [ ] `src/state/pet-reducer.ts` — Pet state reducer with basic actions (FEED, PLAY, CLEAN, TICK)\n- [ ] `tests/unit/pet-reducer.test.ts` — Unit tests for state reducer\n- [ ] All code follows `docs/coding-standards.md`\n- [ ] PR reviewed and merged\n\n## Definition of Done\n\n- [ ] `docs/architecture.md` — Full architecture document with diagrams\n- [ ] `src/main/app.ts` — App lifecycle placeholder\n- [ ] `src/main/tray.ts` — Tray placeholder\n- [ ] `src/main/ipc.ts` — IPC handler placeholders\n- [ ] `src/renderer/index.ts` — Renderer entry point\n- [ ] `src/shared/types.ts` — Core TypeScript interfaces\n- [ ] `src/shared/ipc-contracts.ts` — IPC message contracts\n- [ ] `src/state/pet-reducer.ts` — State reducer\n- [ ] `src/state/pet-actions.ts` — Action creators\n- [ ] `src/state/pet-selectors.ts` — State selectors\n- [ ] `tests/unit/pet-reducer.test.ts` — Reducer unit tests\n- [ ] `tests/unit/pet-actions.test.ts` — Action unit tests\n- [ ] All acceptance criteria verified\n- [ ] PR reviewed and merged\n\n---\n\n**Owner: @coder**",
+  "closed_by": null,
+  "reactions": {
+    "url": "https://api.github.com/repos/EsTOEban/hoshi-desktop-pet/issues/1/reactions",
+    "total_count": 0,
+    "+1": 0,
+    "-1": 0,
+    "laugh": 0,
+    "hooray": 0,
+    "confused": 0,
+    "heart": 0,
+    "rocket": 0,
+    "eyes": 0
+  },
+  "timeline_url": "https://api.github.com/repos/EsTOEban/hoshi-desktop-pet/issues/1/timeline",
+  "performed_via_github_app": null,
+  "state_reason": null,
+  "pinned_comment": null
+}
