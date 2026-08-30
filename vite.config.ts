@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import * as path from 'path';
 
@@ -9,5 +10,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+  },
+  test: {
+    root: path.resolve(__dirname, 'tests'),
+    include: ['**/*.test.ts'],
   },
 });

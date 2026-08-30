@@ -117,7 +117,7 @@ export function petReducer(state: PetState, action: PetAction): PetState {
 const MAX_DELTA_MS = 60_000; // cap at 60 seconds per tick
 
 export function applyDecay(state: PetState, deltaMs: number): PetState {
-  const cappedDelta = Math.min(deltaMs, MAX_DELTA_MS);
+  const cappedDelta = Math.min(Math.max(deltaMs, 0), MAX_DELTA_MS);
   const minutes = cappedDelta / 60_000;
   const isSleeping = state.mood === 'sleeping';
   const rates = isSleeping ? DECAY_RATES.sleeping : DECAY_RATES.awake;

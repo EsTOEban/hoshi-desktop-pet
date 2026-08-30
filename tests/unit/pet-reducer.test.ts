@@ -6,8 +6,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { petReducer, deriveMood, applyDecay, derivePersonality } from './pet-reducer';
-import { DEFAULT_PET_STATE, PetState } from '../shared/types';
+import { petReducer, deriveMood, applyDecay, derivePersonality } from '../../src/state/pet-reducer';
+import { DEFAULT_PET_STATE, PetState } from '../../src/shared/types';
 
 function makeState(overrides: Partial<PetState> = {}): PetState {
   return { ...DEFAULT_PET_STATE, ...overrides };
