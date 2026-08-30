@@ -3,6 +3,15 @@ import * as path from 'path';
 import { PetStateManager } from '../state/pet-state-manager';
 import { createIpcHandlers, desktopAwareness } from './ipc';
 
+// Minigame types
+type MinigameId = 'memory-match' | 'reaction-time';
+
+let minigameCallback: ((id: MinigameId) => void) | null = null;
+
+export function setMinigameCallback(cb: (id: MinigameId) => void): void {
+  minigameCallback = cb;
+}
+
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let petStateManager: PetStateManager | null = null;
