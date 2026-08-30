@@ -8,6 +8,10 @@ import { IpcMain } from 'electron';
 import { PetStateManager } from '../state/pet-state-manager';
 import { IpcChannel, IpcRequest } from '../shared/ipc-contracts';
 
+import { DesktopAwareness } from './desktop-awareness';
+
+const awareness = new DesktopAwareness();
+
 export function createIpcHandlers(ipcMain: IpcMain, stateManager: PetStateManager): void {
   ipcMain.handle(IpcChannel.DISPATCH, (_, request: IpcRequest) => {
     stateManager.dispatch(request.action);
@@ -28,4 +32,15 @@ export function createIpcHandlers(ipcMain: IpcMain, stateManager: PetStateManage
       sender.send(IpcChannel.STATE_CHANGED, state);
     });
   });
+
+  // Desktop awareness handlers
+  ipcMain.handle(IpcChannel.AWARENESS_TOGGLE, (_, enabled: boolean) => {
+    awareness.setEnabled(enabled);
+  });
+
+  ipcMain.handle(IpcChannel.AWARENESS_SET_IDLE, (_, minutes: number) => {
+    awareness.setIdleThreshold(minutes);
+  });
 }
+
+export { awareness as desktopAwareness };

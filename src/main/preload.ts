@@ -30,6 +30,21 @@ const electron = {
   subscribe(): void {
     ipcRenderer.invoke(IpcChannel.SUBSCRIBE);
   },
+
+  // Desktop awareness
+  onAwarenessStateChange(callback: (state: string) => void): () => void {
+    const listener = (_event: unknown, state: string) => callback(state);
+    ipcRenderer.on(IpcChannel.AWARENESS_STATE, listener);
+    return () => ipcRenderer.removeListener(IpcChannel.AWARENESS_STATE, listener);
+  },
+
+  setAwarenessEnabled(enabled: boolean): void {
+    ipcRenderer.invoke(IpcChannel.AWARENESS_TOGGLE, enabled);
+  },
+
+  setIdleThreshold(minutes: number): void {
+    ipcRenderer.invoke(IpcChannel.AWARENESS_SET_IDLE, minutes);
+  },
 };
 
 contextBridge.exposeInMainWorld('electron', electron);

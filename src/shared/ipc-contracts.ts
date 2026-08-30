@@ -10,6 +10,9 @@ export enum IpcChannel {
   GET_MOOD = 'state:getMood',
   SUBSCRIBE = 'state:subscribe',
   STATE_CHANGED = 'state:changed',
+  AWARENESS_STATE = 'awareness:state-change',
+  AWARENESS_TOGGLE = 'awareness:toggle',
+  AWARENESS_SET_IDLE = 'awareness:set-idle-threshold',
 }
 
 export interface IpcRequest {

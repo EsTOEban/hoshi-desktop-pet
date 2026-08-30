@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Tray, Menu, ipcMain, nativeTheme } from 'electron';
 import * as path from 'path';
 import { PetStateManager } from '../state/pet-state-manager';
-import { createIpcHandlers } from './ipc';
+import { createIpcHandlers, desktopAwareness } from './ipc';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -17,6 +17,11 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
   createIpcHandlers(ipcMain, petStateManager);
+  // Start desktop awareness monitoring
+  if (mainWindow) {
+    desktopAwareness.attachWindow(mainWindow);
+    desktopAwareness.start();
+  }
 });
 
 function createWindow(): void {
