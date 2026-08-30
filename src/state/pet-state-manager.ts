@@ -6,6 +6,7 @@
 
 import { PetState, DEFAULT_PET_STATE } from '../shared/types';
 import { petReducer, PetAction } from './pet-reducer';
+import { PersonalityEngine } from './personality-engine';
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,12 +15,14 @@ type Subscriber = (state: PetState) => void;
 
 export class PetStateManager {
   private state: PetState;
+  private personality: PersonalityEngine;
   private subscribers: Set<Subscriber> = new Set();
   private statePath: string;
 
   constructor() {
     this.statePath = path.join(app.getPath('userData'), 'state.json');
     this.state = this.loadState();
+    this.personality = new PersonalityEngine();
   }
 
   getState(): PetState {
@@ -32,6 +35,10 @@ export class PetStateManager {
 
   dispatch(action: PetAction): void {
     this.state = petReducer(this.state, action);
+    // Record personality-relevant interactions
+    if (action.type === 'FEED') this.personality.recordInteraction('feed');
+    if (action.type === 'PLAY') this.personality.recordInteraction('play');
+    if (action.type === 'CLEAN') this.personality.recordInteraction('clean');
     this.notify();
   }
 

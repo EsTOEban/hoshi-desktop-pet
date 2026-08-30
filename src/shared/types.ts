@@ -92,7 +92,42 @@ export const DECAY_RATES = {
   },
 } as const;
 
-// Action history weights for personality derivation
+// Personality evolution system types
+export type PersonalityType = 'spoiled' | 'neglected' | 'balanced' | 'spammed';
+
+export interface CareTendencies {
+  feedCount: number;
+  playCount: number;
+  cleanCount: number;
+  totalInteractions: number;
+  firstInteractionTime: number;
+  lastInteractionTime: number;
+  interactionFrequency: number; // interactions per hour
+}
+
+export interface PersonalityState {
+  currentType: PersonalityType;
+  tendencies: CareTendencies;
+  confidence: number; // 0-1, how confident we are in the classification
+  history: PersonalityType[]; // last N classifications for smoothing
+}
+
+export const DEFAULT_PERSONALITY_STATE: PersonalityState = {
+  currentType: 'balanced',
+  tendencies: {
+    feedCount: 0,
+    playCount: 0,
+    cleanCount: 0,
+    totalInteractions: 0,
+    firstInteractionTime: 0,
+    lastInteractionTime: 0,
+    interactionFrequency: 0,
+  },
+  confidence: 0,
+  history: [],
+};
+
+// Personality axis weights for reducer-based evolution
 export const PERSONALITY_WEIGHTS = {
   FEED: { spoiled: +2, energetic: 0, social: 0 },
   PLAY: { spoiled: 0, energetic: +2, social: 0 },
