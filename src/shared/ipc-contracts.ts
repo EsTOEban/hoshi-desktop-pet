@@ -13,6 +13,11 @@ export enum IpcChannel {
   AWARENESS_STATE = 'awareness:state-change',
   AWARENESS_TOGGLE = 'awareness:toggle',
   AWARENESS_SET_IDLE = 'awareness:set-idle-threshold',
+  NOTIFICATION_SHOW = 'notification:show',
+  NOTIFICATION_TOGGLE = 'notification:toggle',
+  VOICE_SPEAK = 'voice:speak',
+  VOICE_TOGGLE = 'voice:toggle',
+  VOICE_SET_CONFIG = 'voice:set-config',
 }
 
 export interface IpcRequest {

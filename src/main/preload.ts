@@ -45,6 +45,28 @@ const electron = {
   setIdleThreshold(minutes: number): void {
     ipcRenderer.invoke(IpcChannel.AWARENESS_SET_IDLE, minutes);
   },
+
+  // Notifications
+  showNotification(options: { title: string; message: string; iconPath?: string; durationMs?: number }): Promise<boolean> {
+    return ipcRenderer.invoke(IpcChannel.NOTIFICATION_SHOW, options) as Promise<boolean>;
+  },
+
+  setNotificationsEnabled(enabled: boolean): Promise<boolean> {
+    return ipcRenderer.invoke(IpcChannel.NOTIFICATION_TOGGLE, enabled) as Promise<boolean>;
+  },
+
+  // Voice reactions
+  speak(text: string): Promise<boolean> {
+    return ipcRenderer.invoke(IpcChannel.VOICE_SPEAK, text) as Promise<boolean>;
+  },
+
+  setVoiceEnabled(enabled: boolean): Promise<boolean> {
+    return ipcRenderer.invoke(IpcChannel.VOICE_TOGGLE, enabled) as Promise<boolean>;
+  },
+
+  setVoiceConfig(config: { volume?: number; rate?: number; voiceIndex?: number }): Promise<{ enabled: boolean; volume: number; rate: number; voiceIndex: number }> {
+    return ipcRenderer.invoke(IpcChannel.VOICE_SET_CONFIG, config) as Promise<{ enabled: boolean; volume: number; rate: number; voiceIndex: number }>;
+  },
 };
 
 contextBridge.exposeInMainWorld('electron', electron);
