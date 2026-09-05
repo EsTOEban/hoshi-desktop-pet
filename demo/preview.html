@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hoshi — Live Pet Demo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#1a1a2e;color:#eee;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px}
+h1{font-size:1.5rem;margin-bottom:6px;background:linear-gradient(135deg,#e94560,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sub{color:#8892b0;margin-bottom:20px;font-size:.85rem}
+.stage{position:relative;width:300px;height:300px;border-radius:20px;background:linear-gradient(180deg,#2d1b4e,#1a1a2e);border:2px solid #333;display:flex;align-items:center;justify-content:center;margin-bottom:20px;overflow:hidden;cursor:pointer;transition:transform .15s}
+.stage:hover{transform:scale(1.02)}
+.stage img{max-width:260px;max-height:260px;border-radius:12px}
+.ph{width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,#4a2c6e,#2d1b4e);display:flex;align-items:center;justify-content:center;font-size:70px;animation:fl 3s ease-in-out infinite}
+@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.ml{position:absolute;top:10px;right:10px;padding:3px 8px;border-radius:10px;background:rgba(0,0,0,.6);font-size:.75rem;font-weight:600}
+.mb{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:18px;max-width:480px}
+.mb button{padding:5px 12px;border:1px solid #444;border-radius:14px;background:#16213e;color:#eee;font-size:.75rem;cursor:pointer}
+.mb button:hover{border-color:#e94560}
+.mb button.ac{background:#e94560;border-color:#e94560;color:#fff}
+.gr{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:480px;margin-bottom:18px}
+.cd{background:#16213e;border:1px solid #333;border-radius:10px;padding:10px}
+.ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.cn{font-weight:600;font-size:.85rem}
+.cv{font-size:.8rem;color:#8892b0}
+.bar{height:7px;background:#333;border-radius:3px;overflow:hidden}
+.fill{height:100%;border-radius:3px;transition:width .4s,background .3s}
+.fill.h{background:#4ade80}.fill.m{background:#fbbf24}.fill.l{background:#f87171}
+.act{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;justify-content:center}
+.ab{padding:8px 16px;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:transform .15s;display:flex;align-items:center;gap:5px}
+.ab:hover{transform:translateY(-2px)}
+.af{background:#4ade80;color:#000}
+.ap{background:#60a5fa;color:#000}
+.ac{background:#a78bfa;color:#000}
+.as{background:#818cf8;color:#fff}
+.p2{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:480px;margin-bottom:18px}
+.pn{background:#16213e;border:1px solid #333;border-radius:10px;padding:12px}
+.pn h3{font-size:.9rem;margin-bottom:8px;color:#ffd700}
+.tr{display:flex;flex-wrap:wrap;gap:5px}
+.tg{padding:3px 8px;border-radius:8px;background:rgba(233,69,96,.2);border:1px solid #e94560;font-size:.7rem;color:#e94560}
+.st{text-align:center;padding:6px;background:rgba(255,215,0,.1);border-radius:6px;border:1px solid #ffd700}
+.sc{font-size:1.3rem;font-weight:700;color:#ffd700}
+.pr{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #333;font-size:.8rem}
+.pr:last-child{border-bottom:none}
+.hl{max-height:80px;overflow-y:auto;font-size:.75rem;color:#8892b0}
+.le{padding:2px 0;border-bottom:1px solid #222}
+.ft{margin-top:16px;text-align:center;color:#8892b0;font-size:.75rem}
+</style>
+</head>
+<body>
+<h1>🌟 Hoshi Desktop Pet</h1>
+<p class="sub">Tamagotchi-style desktop pet · Darkness from Konosuba</p>
+
+<div class="stage" id="s">
+  <div class="ph" id="p">🐉</div>
+  <img id="i" src="" style="display:none">
+  <div class="ml" id="l">Mood: Content</div>
+</div>
+
+<div class="mb" id="mb"></div>
+
+<div class="gr">
+  <div class="cd"><div class="ch"><span class="cn">🍖 Hunger</span><span class="cv" id="hv">75%</span></div><div class="bar"><div class="fill h" id="hb" style="width:75%"></div></div></div>
+  <div class="cd"><div class="ch"><span class="cn">💖 Happiness</span><span class="cv" id="hapv">80%</span></div><div class="bar"><div class="fill h" id="hapb" style="width:80%"></div></div></div>
+  <div class="cd"><div class="ch"><span class="cn">✨ Cleanliness</span><span class="cv" id="clv">90%</span></div><div class="bar"><div class="fill h" id="clb" style="width:90%"></div></div></div>
+  <div class="cd"><div class="ch"><span class="cn">⚡ Energy</span><span class="cv" id="ev">65%</span></div><div class="bar"><div class="fill m" id="eb" style="width:65%"></div></div></div>
+</div>
+
+<div class="act">
+  <button class="ab af" onclick="int('feed')">🍖 Feed</button>
+  <button class="ab ap" onclick="int('play')">🎾 Play</button>
+  <button class="ab ac" onclick="int('clean')">🧼 Clean</button>
+  <button class="ab as" onclick="int('sleep')">💤 Sleep</button>
+</div>
+
+<div class="p2">
+  <div class="pn"><h3>✨ Personality</h3><div class="tr"><span class="tg">Playful +12</span><span class="tg">Curious +8</span><span class="tg">Brave +15</span><span class="tg">Loyal +20</span><span class="tg">Tsundere +18</span></div></div>
+  <div class="pn"><h3>🔥 Daily Streak</h3><div class="st"><div class="sc">7 Days</div><div style="font-size:.75rem;color:#8892b0">Keep it going!</div></div></div>
+  <div class="pn"><h3>📊 Stats</h3><div class="pr"><span>Interactions</span><strong id="ti">0</strong></div><div class="pr"><span>Time</span><strong id="tt">0m</strong></div><div class="pr"><span>Favorite</span><strong id="fa">-</strong></div></div>
+  <div class="pn"><h3>📜 Log</h3><div class="hl" id="hl"><div class="le">— Session started —</div></div></div>
+</div>
+
+<div class="ft">23 tickets closed · 388 tests · <a href="https://github.com/EsTOEban/hoshi-desktop-pet" style="color:#e94560">GitHub</a></div>
+
+<script>
+const S={hunger:75,happiness:80,cleanliness:90,energy:65,mood:'content',streak:7,interactions:0,fav:{},start:Date.now(),history:[]};
+const E={content:'😌',happy:'😊',excited:'🤩',ecstatic:'🥳',eating:'🍽️',sleeping:'😴',bored:'😐',sad:'😢',sick:'🤒',idle:'🐉'};
+const I={
+  idle:'../assets/characters/darkness/darkness_idle.png',
+  happy:'../assets/characters/darkness/darkness_happy.png',
+  eating:'../assets/characters/darkness/darkness_eating.png',
+  sleeping:'../assets/characters/darkness/darkness_sleeping.png',
+  sad:'../assets/characters/darkness/darkness_sad.png',
+  excited:'../assets/characters/darkness/darkness_excited.png',
+  content:'../assets/characters/darkness/darkness_content.png',
+  ecstatic:'../assets/characters/darkness/darkness_ecstatic.png',
+  sick:'../assets/characters/darkness/darkness_sick.png',
+  bored:'../assets/characters/darkness/darkness_bored.png'
+};
+const M=['content','happy','excited','ecstatic','eating','sleeping','bored','sad','sick','idle'];
+
+function rp(){
+  const img=document.getElementById('i'),ph=document.getElementById('p');
+  document.getElementById('l').textContent='Mood: '+S.mood.charAt(0).toUpperCase()+S.mood.slice(1);
+  const src=I[S.mood];
+  if(src){img.src=src;img.style.display='none';img.onload=function(){img.style.display='block';ph.style.display='none'};img.onerror=function(){img.style.display='none';ph.style.display='flex';ph.textContent=E[S.mood]}}
+  else{img.style.display='none';ph.style.display='flex';ph.textContent=E[S.mood]}
+}
+function rs(){
+  const b=[{v:S.hunger,id:'hb',t:'hv'},{v:S.happiness,id:'hapb',t:'hapv'},{v:S.cleanliness,id:'clb',t:'clv'},{v:S.energy,id:'eb',t:'ev'}];
+  b.forEach(function(x){const f=document.getElementById(x.id);f.style.width=x.v+'%';document.getElementById(x.t).textContent=x.v+'%';f.className='fill '+(x.v>=60?'h':x.v>=30?'m':'l')});
+  document.getElementById('ti').textContent=S.interactions;
+  document.getElementById('tt').textContent=Math.floor((Date.now()-S.start)/6e4)+'m';
+  const fr=Object.entries(S.fav).sort(function(a,b){return b[1]-a[1]})[0];document.getElementById('fa').textContent=fr?fr[0]:'-';
+}
+function al(m){const l=document.getElementById('hl');const e=document.createElement('div');e.className='le';e.textContent='['+new Date().toLocaleTimeString()+'] '+m;l.insertBefore(e,l.firstChild);if(l.children.length>15)l.removeChild(l.lastChild)}
+function int(t){
+  const eff={feed:{hunger:20,happiness:5,mood:'eating'},play:{happiness:15,energy:-10,mood:'excited'},clean:{cleanliness:25,mood:'content'},sleep:{energy:30,mood:'sleeping'}};
+  const e=eff[t];S.hunger=Math.min(100,Math.max(0,S.hunger+(e.hunger||0)));S.happiness=Math.min(100,Math.max(0,S.happiness+(e.happiness||0)));
+  S.cleanliness=Math.min(100,Math.max(0,S.cleanliness+(e.cleanliness||0)));S.energy=Math.min(100,Math.max(0,S.energy+(e.energy||0)));
+  S.mood=e.mood;S.interactions++;S.fav[t]=(S.fav[t]||0)+1;al(t.charAt(0).toUpperCase()+t.slice(1)+' → '+S.mood);rp();rs();
+}
+
+(function(){
+  const mb=document.getElementById('mb');
+  M.forEach(function(m){const b=document.createElement('button');b.textContent=E[m]+' '+m;b.dataset.mood=m;b.onclick=function(){S.mood=m;al('Mood → '+m);rp();mb.querySelectorAll('button').forEach(function(x){x.classList.toggle('ac',x.dataset.mood===S.mood)})};mb.appendChild(b)});
+  document.getElementById('s').onclick=function(){S.happiness=Math.min(100,S.happiness+3);S.interactions++;if(S.happiness>80)S.mood='happy';al('💕 Petted!');rp();rs()};
+  setInterval(function(){S.hunger=Math.max(0,S.hunger-2);S.cleanliness=Math.max(0,S.cleanliness-1);S.energy=Math.max(0,S.energy-1);
+    if(S.hunger<30)S.mood='sad';else if(S.energy<20)S.mood='sleeping';else if(S.cleanliness<20)S.mood='sick';rs()},5000);
+  setInterval(rs,60000);
+  rp();rs();
+})();
+</script>
+</body>
+</html>
