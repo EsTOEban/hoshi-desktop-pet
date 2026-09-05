@@ -27,11 +27,27 @@ body{
   position:relative;
 }
 #pet-sprite.dragging{cursor:grabbing}
-#pet-sprite img{
+
+/* --- Static PNG fallback --- */
+#pet-sprite img.static-png{
   max-width:180px;max-height:180px;
   border-radius:12px;
   pointer-events:none;
 }
+
+/* --- Animated sprite sheet --- */
+#pet-sprite .sprite-anim{
+  pointer-events:none;
+  image-rendering:auto;
+  /* Sprite animation is set dynamically via JS:
+     background-image: url(sheet.png)
+     background-size: <totalWidth>px 512px (horizontal strip)
+     width: 512px; height: 512px (one frame)
+     animation: sprite_<frameCount> <duration> steps(<frameCount>) infinite;
+  */
+}
+
+/* Placeholder emoji fallback */
 .ph{
   width:160px;height:160px;
   border-radius:50%;
@@ -138,7 +154,8 @@ body{
 <!-- Pet sprite (the visual representation) -->
 <div id="pet-sprite">
   <div class="ph" id="pet-ph">🐉</div>
-  <img id="pet-img" src="" alt="" style="display:none">
+  <img id="pet-img" class="static-png" src="" alt="" style="display:none">
+  <div id="pet-sprite-anim" class="sprite-anim" style="display:none"></div>
 </div>
 
 <!-- Passthrough indicator -->
@@ -233,10 +250,28 @@ const state = {
   imgLoaded: false,
 };
 
+// Sprite sheet registry (keyed by mood)
+// Each entry: { frames: number, fps: number, width: number, height: number, url: string }
+// These are populated from the art pipeline (ComfyUI-generated sprite sheets).
+// Fall back to static PNG if a sprite sheet is not registered for a mood.
+const SPRITESHEETS = {
+  // idle:     { frames: 8,  fps: 12, width: 512, height: 512, url: '../assets/characters/darkness/darkness_idle_sheet.png' },
+  // happy:    { frames: 12, fps: 16, width: 512, height: 512, url: '../assets/characters/darkness/darkness_happy_sheet.png' },
+  // eating:   { frames: 10, fps: 14, width: 512, height: 512, url: '../assets/characters/darkness/darkness_eating_sheet.png' },
+  // sleeping: { frames: 8,  fps: 8,  width: 512, height: 512, url: '../assets/characters/darkness/darkness_sleeping_sheet.png' },
+  // sad:      { frames: 8,  fps: 10, width: 512, height: 512, url: '../assets/characters/darkness/darkness_sad_sheet.png' },
+  // excited:  { frames: 16, fps: 20, width: 512, height: 512, url: '../assets/characters/darkness/darkness_excited_sheet.png' },
+  // content:  { frames: 8,  fps: 10, width: 512, height: 512, url: '../assets/characters/darkness/darkness_content_sheet.png' },
+  // ecstatic: { frames: 12, fps: 18, width: 512, height: 512, url: '../assets/characters/darkness/darkness_ecstatic_sheet.png' },
+  // sick:     { frames: 8,  fps: 8,  width: 512, height: 512, url: '../assets/characters/darkness/darkness_sick_sheet.png' },
+  // bored:    { frames: 8,  fps: 10, width: 512, height: 512, url: '../assets/characters/darkness/darkness_bored_sheet.png' },
+};
+
 // DOM refs
 const petSprite = document.getElementById('pet-sprite');
 const petImg = document.getElementById('pet-img');
 const petPh = document.getElementById('pet-ph');
+const petSpriteAnim = document.getElementById('pet-sprite-anim');
 const hitCanvas = document.getElementById('hit-canvas');
 const hitCtx = hitCanvas.getContext('2d');
 const uiOverlay = document.getElementById('ui-overlay');
@@ -244,26 +279,136 @@ const ctxMenu = document.getElementById('ctx-menu');
 const scaleMenu = document.getElementById('scale-menu');
 const passthroughBadge = document.getElementById('passthrough-badge');
 
+// Track current animation for hit-testing and cleanup
+let currentAnimKeyframes = '';
+let currentSpriteSheet = null; // { img, frames, width, height }
+
+
 // =============================================================================
-// ASSET LOADING & HIT-TESTING
+// ANIMATED SPRITE SHEETS
 // =============================================================================
 
-function loadSprite(mood) {
+/**
+ * Create or update the CSS keyframes for a sprite animation.
+ * Uses background-position shifting with steps() for crisp frame-by-frame playback.
+ */
+function ensureSpriteKeyframes(frameCount, frameWidth, frameHeight) {
+  const keyframeName = `sprite_${frameCount}`;
+  const keyframesId = 'sprite-keyframes';
+
+  // Check if this keyframe already exists (avoid duplicates)
+  if (document.getElementById(keyframesId + frameCount)) return keyframeName;
+
+  const totalWidth = frameCount * frameWidth;
+  const keyframes = `@keyframes ${keyframeName} {
+    0% { background-position: 0 0; }
+    100% ${ background-position: -${totalWidth - frameWidth}px 0; }
+  }`;
+
+  // Append style to document
+  let styleEl = document.getElementById(keyframesId);
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = keyframesId;
+    document.head.appendChild(styleEl);
+  }
+  // Tag each appended keyframe set with a unique ID marker
+  const marker = document.createElement('span');
+  marker.id = keyframesId + frameCount;
+  marker.style.display = 'none';
+  styleEl.appendChild(marker);
+
+  styleEl.textContent += '\n' + keyframes;
+  return keyframeName;
+}
+
+/**
+ * Display an animated sprite sheet for the given mood.
+ * Loads the sheet image, sets up CSS animation, and hit-tests against the current frame.
+ */
+function loadAnimatedSprite(mood) {
+  const sheet = SPRITESHEETS[mood];
+  if (!sheet) {
+    // Fallback to static PNG
+    loadStaticSprite(mood);
+    return;
+  }
+
+  const { frames, fps, width, height, url } = sheet;
+
+  // Load the sprite sheet image
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    const keyframeName = ensureSpriteKeyframes(frames, width, height);
+    const duration = frames / fps; // seconds per loop
+    const totalWidth = frames * width;
+
+    // Set up the animated div
+    petSpriteAnim.style.display = 'block';
+    petSpriteAnim.style.backgroundImage = `url('${url}')`;
+    petSpriteAnim.style.backgroundSize = `${totalWidth}px ${height}px`;
+    petSpriteAnim.style.width = `${width}px`;
+    petSpriteAnim.style.height = `${height}px`;
+    petSpriteAnim.style.animation = `${keyframeName}s ${duration}s steps(${frames}) infinite`;
+
+    // Hide static PNG and emoji
+    petImg.style.display = 'none';
+    petPh.style.display = 'none';
+
+    // Store sprite sheet for hit-testing
+    currentSpriteSheet = {
+      img,
+      frames,
+      width,
+      height,
+      frameWidth: width,
+      frameHeight: height,
+    };
+
+    // Update hit-test canvas with the sprite sheet
+    hitCanvas.width = width;
+    hitCanvas.height = height;
+    hitCtx.clearRect(0, 0, width, height);
+    hitCtx.drawImage(img, 0, 0, width, height, 0, 0, width, height);
+
+    state.currentImg = img;
+    state.imgLoaded = true;
+  };
+  img.onerror = () => {
+    // Fallback to static PNG
+    loadStaticSprite(mood);
+  };
+  img.src = url;
+}
+
+/**
+ * Display a static PNG for the given mood (fallback when no sprite sheet available).
+ */
+function loadStaticSprite(mood) {
   const src = ASSETS[mood];
   if (!src) {
     petImg.style.display = 'none';
+    petSpriteAnim.style.display = 'none';
     petPh.style.display = 'flex';
     petPh.textContent = EMOJI[mood] || '🐉';
     state.currentImg = null;
     state.imgLoaded = false;
+    currentSpriteSheet = null;
     return;
   }
+
+  // Clean up any active animation
+  petSpriteAnim.style.display = 'none';
+  petSpriteAnim.style.animation = '';
 
   const img = new Image();
   img.crossOrigin = 'anonymous';
   img.onload = () => {
     state.currentImg = img;
     state.imgLoaded = true;
+    currentSpriteSheet = null;
+
     // Draw to hidden canvas for hit testing
     hitCanvas.width = img.naturalWidth;
     hitCanvas.height = img.naturalHeight;
@@ -276,16 +421,30 @@ function loadSprite(mood) {
   };
   img.onerror = () => {
     petImg.style.display = 'none';
+    petSpriteAnim.style.display = 'none';
     petPh.style.display = 'flex';
     petPh.textContent = EMOJI[mood] || '🐉';
     state.currentImg = null;
     state.imgLoaded = false;
+    currentSpriteSheet = null;
   };
   img.src = src;
 }
 
 /**
+ * Load a sprite for the given mood: prefer animated sheet, fall back to static PNG.
+ */
+function loadSprite(mood) {
+  if (SPRITESHEETS[mood]?.url) {
+    loadAnimatedSprite(mood);
+  } else {
+    loadStaticSprite(mood);
+  }
+}
+
+/**
  * Per-pixel hit test: sample the alpha channel at the cursor position.
+ * Works for both static PNGs and animated sprite sheets.
  * Returns true if cursor is over a visible (non-transparent) part of the sprite.
  */
 function isCursorOverSprite(clientX, clientY) {
@@ -295,6 +454,24 @@ function isCursorOverSprite(clientX, clientY) {
   const rect = petSprite.getBoundingClientRect();
   const relX = clientX - rect.left;
   const relY = clientY - rect.top;
+
+  // For sprite sheets, use the sprite-anim div's bounding rect (the actual displayed frame)
+  let targetRect = rect;
+  if (currentSpriteSheet) {
+    const animRect = petSpriteAnim.getBoundingClientRect();
+    if (animRect.width > 0 && animRect.height > 0) {
+      targetRect = animRect;
+      const relX2 = clientX - targetRect.left;
+      const relY2 = clientY - targetRect.top;
+      const scaleX = hitCanvas.width / targetRect.width;
+      const scaleY = hitCanvas.height / targetRect.height;
+      const px = Math.floor(relX2 * scaleX);
+      const py = Math.floor(relY2 * scaleY);
+      if (px < 0 || py < 0 || px >= hitCanvas.width || py >= hitCanvas.height) return false;
+      const pixel = hitCtx.getImageData(px, py, 1, 1).data;
+      return pixel[3] > 32;
+    }
+  }
 
   // Map to canvas coordinates
   const scaleX = hitCanvas.width / rect.width;
