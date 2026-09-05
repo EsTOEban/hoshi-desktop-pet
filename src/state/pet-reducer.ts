@@ -152,7 +152,7 @@ export function applyDecay(state: PetState, deltaMs: number): PetState {
 // Mood derivation (pure function of needs, priority-ordered)
 // ---------------------------------------------------------------------------
 
-export function deriveMood(state: Pick<PetState, 'hunger' | 'happiness' | 'cleanliness' | 'energy'>): Mood {
+export function deriveMood(state: Pick<PetState, 'hunger' | 'happiness' | 'cleanliness' | 'energy'> & { needs?: Needs }): Mood {
   // Priority order (first match wins):
   // sick → sleeping → angry → hungry → sad → excited → happy → bored → neutral
 

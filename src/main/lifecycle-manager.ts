@@ -4,7 +4,7 @@
  */
 
 import { BrowserWindow, app, powerMonitor } from 'electron';
-import { PetState } from '../shared/types';
+import { PetState, Mood } from '../shared/types';
 
 export interface CatchUpResult {
   elapsedMs: number;
@@ -157,7 +157,7 @@ export class LifecycleManager {
   /**
    * Simple mood derivation from pet state.
    */
-  private deriveMood(state: PetState): string {
+  private deriveMood(state: PetState): Mood {
     const avg = (state.hunger + state.happiness + state.energy + state.cleanliness) / 4;
     if (avg >= 80) return 'happy';
     if (avg >= 60) return 'content';

@@ -13,7 +13,9 @@ export type Mood =
   | 'sleeping'
   | 'excited'
   | 'bored'
-  | 'neutral';
+  | 'neutral'
+  | 'content'
+  | 'upset';
 
 export interface Needs {
   hunger: number;      // 0-100, 100 = full
