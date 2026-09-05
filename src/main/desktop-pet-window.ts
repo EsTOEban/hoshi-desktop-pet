@@ -16,11 +16,22 @@ import { Settings } from './settings';
 
 const PASSTHROUGH_TOGGLE_ACCEL = 'Ctrl+Shift+P';
 
+export interface HitRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label?: string;
+}
+
 export class DesktopPetWindow {
   private window: BrowserWindow | null = null;
   private settings: Settings;
   private isDragging = false;
   private dragOffset = { x: 0, y: 0 };
+  private hitRegions: HitRegion[] = [];
+  private hitTestEnabled = true;
+  private testMode = false;
 
   constructor(settings: Settings) {
     this.settings = settings;
@@ -152,6 +163,62 @@ export class DesktopPetWindow {
 
     ipcMain.handle('pet:endDrag', () => {
       this.isDragging = false;
+    });
+
+    // Test Mode IPC (AC10.x) — for automated QA
+    ipcMain.handle('pet:setHitTestEnabled', (_, enabled: boolean) => {
+      this.hitTestEnabled = enabled;
+    });
+
+    ipcMain.handle('pet:getHitTestEnabled', () => {
+      return this.hitTestEnabled;
+    });
+
+    ipcMain.handle('pet:setHitRegions', (_, regions: HitRegion[]) => {
+      this.hitRegions = regions;
+    });
+
+    ipcMain.handle('pet:getHitRegions', () => {
+      return this.hitRegions;
+    });
+
+    ipcMain.handle('pet:simulateClick', (_, x: number, y: number) => {
+      if (!this.window) return null;
+      const [winX, winY] = this.window.getPosition();
+      const screenX = winX + x;
+      const screenY = winY + y;
+      // Check if click hits any region
+      const hit = this.hitTestEnabled && this.hitRegions.some(r =>
+        x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height
+      );
+      return { hit, screenX, screenY, x, y };
+    });
+
+    ipcMain.handle('pet:getWindowState', () => {
+      if (!this.window) return null;
+      const [winX, winY] = this.window.getPosition();
+      const [width, height] = this.window.getSize();
+      return {
+        x: winX,
+        y: winY,
+        width,
+        height,
+        scale: this.settings.getScale(),
+        passthrough: this.settings.getPassthrough(),
+        hitTestEnabled: this.hitTestEnabled,
+        hitRegions: this.hitRegions,
+        isDragging: this.isDragging,
+        visible: this.window.isVisible(),
+        destroyed: this.window.isDestroyed(),
+      };
+    });
+
+    ipcMain.handle('pet:setTestMode', (_, enabled: boolean) => {
+      this.testMode = enabled;
+    });
+
+    ipcMain.handle('pet:getTestMode', () => {
+      return this.testMode;
     });
   }
 

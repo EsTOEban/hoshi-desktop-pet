@@ -114,6 +114,49 @@ const electron = {
     ipcRenderer.on('pet:passthrough-changed', listener);
     return () => ipcRenderer.removeListener('pet:passthrough-changed', listener);
   },
+
+  // Test Mode IPC (AC10.x) — for automated QA
+  setHitTestEnabled(enabled: boolean): void {
+    ipcRenderer.invoke('pet:setHitTestEnabled', enabled);
+  },
+
+  getHitTestEnabled(): Promise<boolean> {
+    return ipcRenderer.invoke('pet:getHitTestEnabled') as Promise<boolean>;
+  },
+
+  setHitRegions(regions: Array<{ x: number; y: number; width: number; height: number; label?: string }>): void {
+    ipcRenderer.invoke('pet:setHitRegions', regions);
+  },
+
+  getHitRegions(): Promise<Array<{ x: number; y: number; width: number; height: number; label?: string }>> {
+    return ipcRenderer.invoke('pet:getHitRegions') as Promise<Array<{ x: number; y: number; width: number; height: number; label?: string }>>;
+  },
+
+  simulateClick(x: number, y: number): Promise<{ hit: boolean; screenX: number; screenY: number; x: number; y: number } | null> {
+    return ipcRenderer.invoke('pet:simulateClick', x, y) as Promise<{ hit: boolean; screenX: number; screenY: number; x: number; y: number } | null>;
+  },
+
+  getWindowState(): Promise<{
+    x: number; y: number; width: number; height: number; scale: number;
+    passthrough: boolean; hitTestEnabled: boolean;
+    hitRegions: Array<{ x: number; y: number; width: number; height: number; label?: string }>;
+    isDragging: boolean; visible: boolean; destroyed: boolean;
+  } | null> {
+    return ipcRenderer.invoke('pet:getWindowState') as Promise<{
+      x: number; y: number; width: number; height: number; scale: number;
+      passthrough: boolean; hitTestEnabled: boolean;
+      hitRegions: Array<{ x: number; y: number; width: number; height: number; label?: string }>;
+      isDragging: boolean; visible: boolean; destroyed: boolean;
+    } | null>;
+  },
+
+  setTestMode(enabled: boolean): void {
+    ipcRenderer.invoke('pet:setTestMode', enabled);
+  },
+
+  getTestMode(): Promise<boolean> {
+    return ipcRenderer.invoke('pet:getTestMode') as Promise<boolean>;
+  },
 };
 
 contextBridge.exposeInMainWorld('electron', electron);

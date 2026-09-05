@@ -16,6 +16,7 @@ function createMockWindow() {
     hide: vi.fn(),
     destroy: vi.fn(),
     isDestroyed: vi.fn(() => false),
+    isVisible: vi.fn(() => true),
     setVisibleOnAllWorkspaces: vi.fn(),
     setAspectRatio: vi.fn(),
     setIgnoreMouseEvents: vi.fn(),
@@ -40,7 +41,7 @@ vi.mock('electron', () => {
       workAreaSize: { width: 1920, height: 1080 },
       bounds: { x: 0, y: 0, width: 1920, height: 1080 },
     })),
-    getCursorScreenPosition: vi.fn(() => ({ x: 500, y: 500 })),
+    getCursorScreenPoint: vi.fn(() => ({ x: 500, y: 500 })),
   };
   const globalShortcut = {
     register: vi.fn(() => true),
@@ -260,5 +261,137 @@ describe('DesktopPetWindow', () => {
     petWindow.destroy();
     expect(globalShortcut.unregister).toHaveBeenCalledWith('Ctrl+Shift+P');
     expect(currentMockWindow.destroy).toHaveBeenCalled();
+  });
+
+  // Test Mode IPC tests (AC10.x)
+  describe('Test Mode IPC', () => {
+    it('registers test mode IPC handlers', async () => {
+      const { ipcMain } = await import('electron');
+      const handledChannels = vi.mocked(ipcMain.handle).mock.calls.map(c => c[0]);
+      expect(handledChannels).toContain('pet:setHitTestEnabled');
+      expect(handledChannels).toContain('pet:getHitTestEnabled');
+      expect(handledChannels).toContain('pet:setHitRegions');
+      expect(handledChannels).toContain('pet:getHitRegions');
+      expect(handledChannels).toContain('pet:simulateClick');
+      expect(handledChannels).toContain('pet:getWindowState');
+      expect(handledChannels).toContain('pet:setTestMode');
+      expect(handledChannels).toContain('pet:getTestMode');
+    });
+
+    it('setHitTestEnabled updates state', async () => {
+      const { ipcMain } = await import('electron');
+      const calls = vi.mocked(ipcMain.handle).mock.calls;
+      const setCall = calls.find(c => c[0] === 'pet:setHitTestEnabled');
+      const getCall = calls.find(c => c[0] === 'pet:getHitTestEnabled');
+
+      (setCall![1] as (_: unknown, enabled: boolean) => void)({}, false);
+      expect((getCall![1] as () => boolean)()).toBe(false);
+
+      (setCall![1] as (_: unknown, enabled: boolean) => void)({}, true);
+      expect((getCall![1] as () => boolean)()).toBe(true);
+    });
+
+    it('setHitRegions stores and getHitRegions retrieves', async () => {
+      const { ipcMain } = await import('electron');
+      const calls = vi.mocked(ipcMain.handle).mock.calls;
+      const setCall = calls.find(c => c[0] === 'pet:setHitRegions');
+      const getCall = calls.find(c => c[0] === 'pet:getHitRegions');
+
+      const regions = [
+        { x: 10, y: 20, width: 100, height: 150, label: 'sprite' },
+        { x: 5, y: 5, width: 50, height: 30, label: 'button' },
+      ];
+
+      (setCall![1] as (_: unknown, regions: any[]) => void)({}, regions);
+      const retrieved = (getCall![1] as () => any[])();
+
+      expect(retrieved).toHaveLength(2);
+      expect(retrieved[0].label).toBe('sprite');
+      expect(retrieved[1].x).toBe(5);
+    });
+
+    it('simulateClick returns hit when click is inside a region', async () => {
+      const { ipcMain } = await import('electron');
+      const calls = vi.mocked(ipcMain.handle).mock.calls;
+
+      const setRegionsCall = calls.find(c => c[0] === 'pet:setHitRegions');
+      (setRegionsCall![1] as (_: unknown, regions: any[]) => void)({}, [
+        { x: 10, y: 10, width: 100, height: 100, label: 'sprite' },
+      ]);
+
+      const simulateCall = calls.find(c => c[0] === 'pet:simulateClick');
+      const handler = simulateCall![1] as (_: unknown, x: number, y: number) => any;
+
+      const result = handler({}, 50, 50);
+      expect(result.hit).toBe(true);
+      expect(result.x).toBe(50);
+      expect(result.y).toBe(50);
+    });
+
+    it('simulateClick returns miss when click is outside all regions', async () => {
+      const { ipcMain } = await import('electron');
+      const calls = vi.mocked(ipcMain.handle).mock.calls;
+
+      const setRegionsCall = calls.find(c => c[0] === 'pet:setHitRegions');
+      (setRegionsCall![1] as (_: unknown, regions: any[]) => void)({}, [
+        { x: 10, y: 10, width: 100, height: 100 },
+      ]);
+
+      const simulateCall = calls.find(c => c[0] === 'pet:simulateClick');
+      const handler = simulateCall![1] as (_: unknown, x: number, y: number) => any;
+
+      const result = handler({}, 5, 5);
+      expect(result.hit).toBe(false);
+    });
+
+    it('simulateClick returns miss when hit testing is disabled', async () => {
+      const { ipcMain } = await import('electron');
+      const calls = vi.mocked(ipcMain.handle).mock.calls;
+
+      const setRegionsCall = calls.find(c => c[0] === 'pet:setHitRegions');
+      (setRegionsCall![1] as (_: unknown, regions: any[]) => void)({}, [
+        { x: 10, y: 10, width: 100, height: 100 },
+      ]);
+
+      const setEnabledCall = calls.find(c => c[0] === 'pet:setHitTestEnabled');
+      (setEnabledCall![1] as (_: unknown, enabled: boolean) => void)({}, false);
+
+      const simulateCall = calls.find(c => c[0] === 'pet:simulateClick');
+      const handler = simulateCall![1] as (_: unknown, x: number, y: number) => any;
+
+      const result = handler({}, 50, 50);
+      expect(result.hit).toBe(false);
+    });
+
+    it('getWindowState returns full window state', async () => {
+      const { ipcMain } = await import('electron');
+      const calls = vi.mocked(ipcMain.handle).mock.calls;
+      const getCall = calls.find(c => c[0] === 'pet:getWindowState');
+      const handler = getCall![1] as () => any;
+
+      const state = handler();
+      expect(state).not.toBeNull();
+      expect(state.x).toBe(200);
+      expect(state.y).toBe(300);
+      expect(typeof state.scale).toBe('number');
+      expect(typeof state.passthrough).toBe('boolean');
+      expect(typeof state.hitTestEnabled).toBe('boolean');
+      expect(Array.isArray(state.hitRegions)).toBe(true);
+      expect(typeof state.isDragging).toBe('boolean');
+      expect(typeof state.destroyed).toBe('boolean');
+    });
+
+    it('setTestMode updates and getTestMode retrieves', async () => {
+      const { ipcMain } = await import('electron');
+      const calls = vi.mocked(ipcMain.handle).mock.calls;
+      const setCall = calls.find(c => c[0] === 'pet:setTestMode');
+      const getCall = calls.find(c => c[0] === 'pet:getTestMode');
+
+      (setCall![1] as (_: unknown, enabled: boolean) => void)({}, true);
+      expect((getCall![1] as () => boolean)()).toBe(true);
+
+      (setCall![1] as (_: unknown, enabled: boolean) => void)({}, false);
+      expect((getCall![1] as () => boolean)()).toBe(false);
+    });
   });
 });
