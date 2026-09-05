@@ -282,6 +282,15 @@ export class DesktopPetWindow {
     this.window?.hide();
   }
 
+  togglePassthrough(): void {
+    const newState = !this.settings.getPassthrough();
+    this.applyPassthrough(newState);
+    this.settings.setPassthrough(newState);
+    if (this.window && !this.window.isDestroyed()) {
+      this.window.webContents.send('pet:passthrough-changed', newState);
+    }
+  }
+
   destroy(): void {
     try {
       globalShortcut.unregister(PASSTHROUGH_TOGGLE_ACCEL);

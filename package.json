@@ -16,15 +16,18 @@
     "start": "electron dist/main/app.js",
     "clean": "rm -rf dist/"
   },
-  "keywords": ["tamagotchi", "desktop-pet", "electron", "typescript"],
+  "keywords": [
+    "tamagotchi",
+    "desktop-pet",
+    "electron",
+    "typescript"
+  ],
   "author": "EsTOEban",
   "license": "PolyForm-Strict-1.0.0",
-  "dependencies": {
-    "electron": "^31.0.0"
-  },
   "devDependencies": {
     "@types/node": "^20.14.0",
     "concurrently": "^8.2.0",
+    "electron": "^44.2.0",
     "electron-builder": "^24.13.0",
     "eslint": "^9.6.0",
     "typescript": "^5.5.0",

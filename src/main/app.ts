@@ -58,6 +58,7 @@ function createTray(): void {
     { label: 'Play', click: () => petStateManager?.dispatch({ type: 'PLAY', intensity: 15 }) },
     { label: 'Clean', click: () => petStateManager?.dispatch({ type: 'CLEAN' }) },
     { label: 'Sleep', click: () => petStateManager?.dispatch({ type: 'SLEEP' }) },
+    { label: 'Toggle Passthrough', click: () => desktopPet?.togglePassthrough() },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() },
   ]);
