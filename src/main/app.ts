@@ -2,6 +2,8 @@ import { app, BrowserWindow, Tray, Menu, ipcMain, nativeTheme } from 'electron';
 import * as path from 'path';
 import { PetStateManager } from '../state/pet-state-manager';
 import { createIpcHandlers, desktopAwareness } from './ipc';
+import { DesktopPetWindow } from './desktop-pet-window';
+import { Settings } from './settings';
 
 // Minigame types
 type MinigameId = 'memory-match' | 'reaction-time';
@@ -15,6 +17,8 @@ export function setMinigameCallback(cb: (id: MinigameId) => void): void {
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let petStateManager: PetStateManager | null = null;
+let desktopPet: DesktopPetWindow | null = null;
+let settings: Settings | null = null;
 
 const isSingleInstance = app.requestSingleInstanceLock();
 if (!isSingleInstance) {
@@ -22,10 +26,16 @@ if (!isSingleInstance) {
 }
 
 app.whenReady().then(() => {
+  settings = new Settings();
   petStateManager = new PetStateManager();
-  createWindow();
+  
+  // Create the desktop pet window (transparent overlay)
+  desktopPet = new DesktopPetWindow(settings);
+  mainWindow = desktopPet.create();
+  
   createTray();
   createIpcHandlers(ipcMain, petStateManager);
+  
   // Start desktop awareness monitoring
   if (mainWindow) {
     desktopAwareness.attachWindow(mainWindow);
@@ -33,34 +43,16 @@ app.whenReady().then(() => {
   }
 });
 
-function createWindow(): void {
-  mainWindow = new BrowserWindow({
-    width: 400,
-    height: 600,
-    transparent: true,
-    frame: false,
-    alwaysOnTop: true,
-    skipTaskbar: true,
-    resizable: false,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
-    },
-  });
-
-  mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
-  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullscreen: true });
-}
-
 function createTray(): void {
   const iconPath = path.join(__dirname, '../../assets/tray-icon.png');
   tray = new Tray(iconPath);
   tray.setToolTip('Hoshi — Darkness is here');
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Show Pet', click: () => mainWindow?.show() },
-    { label: 'Hide Pet', click: () => mainWindow?.hide() },
+    { label: 'Show Pet', click: () => desktopPet?.show() },
+    { label: 'Hide Pet', click: () => desktopPet?.hide() },
+    { type: 'separator' },
+    { label: 'Send Home', click: () => mainWindow && (mainWindow as any).sendHome?.() },
     { type: 'separator' },
     { label: 'Feed', click: () => petStateManager?.dispatch({ type: 'FEED', amount: 20 }) },
     { label: 'Play', click: () => petStateManager?.dispatch({ type: 'PLAY', intensity: 15 }) },
@@ -71,7 +63,7 @@ function createTray(): void {
   ]);
 
   tray.setContextMenu(contextMenu);
-  tray.on('double-click', () => mainWindow?.show());
+  tray.on('double-click', () => desktopPet?.show());
 }
 
 app.on('window-all-closed', () => {
@@ -87,4 +79,5 @@ app.on('second-instance', () => {
 
 app.on('before-quit', () => {
   petStateManager?.persistState();
+  desktopPet?.destroy();
 });

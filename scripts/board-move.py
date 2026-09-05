@@ -105,7 +105,9 @@ query {{
     for item in result['data']['node']['items']['nodes']:
         content = item.get('content', {})
         if content and content.get('number') == issue_number:
-            return item['id'], item.get('fieldValueByName', {}).get('name', 'No Status')
+            fv = item.get('fieldValueByName')
+            name = fv.get('name', 'No Status') if fv else 'No Status'
+            return item['id'], name
     return None, None
 
 
@@ -132,8 +134,8 @@ query {{
     for item in result['data']['node']['items']['nodes']:
         content = item.get('content', {})
         if content and content.get('number'):
-            status = item.get('fieldValueByName', {})
-            status_name = status.get('name', 'No Status') if status else 'No Status'
+            fv = item.get('fieldValueByName')
+            status_name = fv.get('name', 'No Status') if fv else 'No Status'
             print(f'#{content["number"]:>2} [{status_name:>12}] {content["title"]}')
 
 

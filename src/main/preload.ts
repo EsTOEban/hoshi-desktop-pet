@@ -67,6 +67,53 @@ const electron = {
   setVoiceConfig(config: { volume?: number; rate?: number; voiceIndex?: number }): Promise<{ enabled: boolean; volume: number; rate: number; voiceIndex: number }> {
     return ipcRenderer.invoke(IpcChannel.VOICE_SET_CONFIG, config) as Promise<{ enabled: boolean; volume: number; rate: number; voiceIndex: number }>;
   },
+
+  // Desktop pet window
+  getCursorPosition(): Promise<{ cursorX: number; cursorY: number; winX: number; winY: number } | null> {
+    return ipcRenderer.invoke('pet:getCursorPosition') as Promise<{ cursorX: number; cursorY: number; winX: number; winY: number } | null>;
+  },
+
+  setPassthrough(enabled: boolean): void {
+    ipcRenderer.invoke('pet:setPassthrough', enabled);
+  },
+
+  togglePassthrough(): Promise<boolean> {
+    return ipcRenderer.invoke('pet:togglePassthrough') as Promise<boolean>;
+  },
+
+  getPassthrough(): Promise<boolean> {
+    return ipcRenderer.invoke('pet:getPassthrough') as Promise<boolean>;
+  },
+
+  setScale(scale: number): void {
+    ipcRenderer.invoke('pet:setScale', scale);
+  },
+
+  getScale(): Promise<number> {
+    return ipcRenderer.invoke('pet:getScale') as Promise<number>;
+  },
+
+  sendHome(): void {
+    ipcRenderer.invoke('pet:sendHome');
+  },
+
+  startDrag(): void {
+    ipcRenderer.invoke('pet:startDrag');
+  },
+
+  dragTo(x: number, y: number): void {
+    ipcRenderer.invoke('pet:dragTo', { x, y });
+  },
+
+  endDrag(): void {
+    ipcRenderer.invoke('pet:endDrag');
+  },
+
+  onPassthroughChanged(callback: (enabled: boolean) => void): () => void {
+    const listener = (_event: unknown, enabled: boolean) => callback(enabled);
+    ipcRenderer.on('pet:passthrough-changed', listener);
+    return () => ipcRenderer.removeListener('pet:passthrough-changed', listener);
+  },
 };
 
 contextBridge.exposeInMainWorld('electron', electron);

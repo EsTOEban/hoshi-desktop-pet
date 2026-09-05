@@ -1,68 +1,58 @@
 /**
  * @module state/personality-engine
- * Calculates personality type from care interaction history.
- * Aligned with issue #11 and docs/state-machine-spec.md.
+ * Personality Evolution System (#11)
+ * 
+ * Tracks care tendencies via running totals (O(1) per interaction),
+ * classifies personality type, and provides mood threshold modifiers.
+ * 
+ * Aligned with docs/state-machine-spec.md and #11 acceptance criteria.
+ * Implementation conforms to tests/unit/personality.test.ts.
  */
 
 import {
-  PersonalityState,
   PersonalityType,
+  CareTendencies,
+  PersonalityState,
   DEFAULT_PERSONALITY_STATE,
 } from '../shared/types';
 
-// Minimum interactions before we can classify
-const MIN_INTERACTIONS = 5;
-// Minimum hours of data before personality stabilizes
-const MIN_HOURS = 24;
-// History length for smoothing
-const HISTORY_LENGTH = 10;
+// ---------------------------------------------------------------------------
+// Classification thresholds
+// ---------------------------------------------------------------------------
 
-/**
- * PersonalityEngine tracks care tendencies from interaction history
- * and classifies the pet into one of four personality types:
- * - spoiled: high feed, low play (pampered but bored)
- * - neglected: low everything (needs attention)
- * - balanced: even care across all types
- * - spammed: rapid repeated interactions
- *
- * Uses O(1) running totals, not full history.
- */
+/** Minimum interactions before we trust the classification */
+const MIN_INTERACTIONS = 5;
+
+/** How many consecutive same-type classifications before switching */
+const SMOOTHING_THRESHOLD = 3;
+
+// ---------------------------------------------------------------------------
+// PersonalityEngine
+// ---------------------------------------------------------------------------
+
 export class PersonalityEngine {
   private state: PersonalityState;
 
-  constructor(savedState?: PersonalityState) {
-    if (savedState) {
-      this.state = {
-        ...savedState,
-        tendencies: { ...savedState.tendencies },
-        history: [...savedState.history],
-      };
-    } else {
-      this.state = {
-        ...DEFAULT_PERSONALITY_STATE,
-        tendencies: { ...DEFAULT_PERSONALITY_STATE.tendencies },
-        history: [],
-      };
-    }
-  }
-
-  getState(): PersonalityState {
-    return this.state;
+  constructor(initialState?: PersonalityState) {
+    this.state = initialState
+      ? { ...initialState, tendencies: { ...initialState.tendencies }, history: [...(initialState.history || [])] }
+      : JSON.parse(JSON.stringify(DEFAULT_PERSONALITY_STATE));
   }
 
   /**
-   * Record a care interaction.
-   * O(1) per interaction.
+   * Record a personality-relevant interaction. O(1) — only updates counters.
+   * @param type - The interaction type
+   * @param timestamp - Optional timestamp (defaults to Date.now()), used for testing
    */
-  recordInteraction(
-    type: 'feed' | 'play' | 'clean',
-    timestamp: number = Date.now()
-  ): void {
+  recordInteraction(type: 'feed' | 'play' | 'clean', timestamp?: number): void {
+    const now = timestamp ?? Date.now();
     const t = this.state.tendencies;
 
     if (t.totalInteractions === 0) {
-      t.firstInteractionTime = timestamp;
+      t.firstInteractionTime = now;
     }
+    t.lastInteractionTime = now;
+    t.totalInteractions++;
 
     switch (type) {
       case 'feed':
@@ -76,166 +66,136 @@ export class PersonalityEngine {
         break;
     }
 
-    t.totalInteractions++;
-    t.lastInteractionTime = timestamp;
-
     // Update interaction frequency (interactions per hour)
-    const hoursSinceFirst =
-      (timestamp - t.firstInteractionTime) / (1000 * 60 * 60);
+    const hoursSinceFirst = (now - t.firstInteractionTime) / 3_600_000;
     if (hoursSinceFirst > 0) {
       t.interactionFrequency = t.totalInteractions / hoursSinceFirst;
     }
 
-    // Recalculate personality
-    this.recalculate();
+    // Reclassify after each interaction
+    this.reclassify();
   }
 
   /**
-   * Recalculate personality type from current tendencies.
-   * Called after every interaction.
+   * Get the current personality type with confidence.
    */
-  private recalculate(): void {
-    const t = this.state.tendencies;
-
-    // Not enough data yet — stay balanced
-    if (t.totalInteractions < MIN_INTERACTIONS) {
-      this.state.currentType = 'balanced';
-      this.state.confidence = 0;
-      return;
-    }
-
-    // Determine raw classification
-    const rawType = this.classify(t);
-
-    // Smooth with history to prevent sudden flips
-    this.state.history.push(rawType);
-    if (this.state.history.length > HISTORY_LENGTH) {
-      this.state.history.shift();
-    }
-
-    // Use majority vote from history
-    const counts = new Map<PersonalityType, number>();
-    for (const h of this.state.history) {
-      counts.set(h, (counts.get(h) ?? 0) + 1);
-    }
-
-    let maxCount = 0;
-    let majority: PersonalityType = 'balanced';
-    for (const [type, count] of counts) {
-      if (count > maxCount) {
-        maxCount = count;
-        majority = type;
-      }
-    }
-
-    this.state.currentType = majority;
-    // Spammed is an immediate behavior signal — override smoothed history
-    if (rawType === 'spammed') {
-      this.state.currentType = 'spammed';
-    }
-    this.state.confidence = maxCount / this.state.history.length;
+  getPersonalityType(): PersonalityType {
+    return this.state.currentType;
   }
 
   /**
-   * Classify a single personality type from tendencies.
+   * Get full personality state (for persistence).
    */
-  private classify(t: {
-    feedCount: number;
-    playCount: number;
-    cleanCount: number;
-    totalInteractions: number;
-    interactionFrequency: number;
-  }): PersonalityType {
-    const totalTimeSeconds =
-      (t.lastInteractionTime - t.firstInteractionTime) / 1000;
-
-    // Spammed: truly rapid (> 10 interactions in under 2 seconds)
-    // This threshold distinguishes "spamming buttons" from "active care"
-    if (totalTimeSeconds < 2 && t.totalInteractions > 10) {
-      return 'spammed';
-    }
-
-    const hoursSinceFirst = totalTimeSeconds / 3600;
-
-    // Neglected: very low interaction frequency over a long period
-    if (hoursSinceFirst >= MIN_HOURS && t.interactionFrequency < 0.5) {
-      return 'neglected';
-    }
-
-    // Calculate ratios
-    const feedRatio = t.feedCount / t.totalInteractions;
-    const playRatio = t.playCount / t.totalInteractions;
-    const cleanRatio = t.cleanCount / t.totalInteractions;
-
-    // Spoiled: mostly fed, little play
-    if (feedRatio > 0.5 && playRatio < 0.2) {
-      return 'spoiled';
-    }
-
-    // Balanced: all ratios within [0.2, 0.5]
-    if (
-      feedRatio >= 0.2 &&
-      feedRatio <= 0.5 &&
-      playRatio >= 0.2 &&
-      playRatio <= 0.5 &&
-      cleanRatio >= 0.2 &&
-      cleanRatio <= 0.5
-    ) {
-      return 'balanced';
-    }
-
-    // Default: whatever dominates
-    if (feedRatio >= playRatio && feedRatio >= cleanRatio) {
-      return feedRatio > 0.4 ? 'spoiled' : 'balanced';
-    }
-    if (playRatio >= feedRatio && playRatio >= cleanRatio) {
-      return 'balanced';
-    }
-    return 'balanced';
+  getState(): PersonalityState {
+    return { ...this.state, tendencies: { ...this.state.tendencies }, history: [...this.state.history] };
   }
 
   /**
-   * Get dialog modifier based on personality type.
-   * Spoiled pets complain more, neglected pets are clingy.
+   * Dialog tone hint based on personality.
    */
   getDialogModifier(): number {
     switch (this.state.currentType) {
       case 'spoiled':
-        return 1.5; // 50% more complaints
+        return 1.5;
       case 'neglected':
-        return 2.0; // 100% more clingy messages
+        return 2.0;
       case 'spammed':
-        return 1.2; // slightly annoyed
+        return 1.2;
+      case 'balanced':
       default:
         return 1.0;
     }
   }
 
   /**
-   * Get mood decay multiplier based on personality type.
-   * Spoiled pets get unhappy faster when needs drop.
+   * Mood decay multiplier: multiplies the base decay rate.
    */
   getMoodDecayMultiplier(): number {
     switch (this.state.currentType) {
       case 'spoiled':
         return 1.2; // 20% faster decay
       case 'neglected':
-        return 0.9; // slightly resilient
+        return 0.8; // 20% slower decay
       case 'spammed':
-        return 1.1;
+        return 1.1; // slightly faster
+      case 'balanced':
       default:
         return 1.0;
     }
   }
 
   /**
-   * Reset personality to default.
+   * Reset personality to initial state.
    */
   reset(): void {
-    this.state = {
-      ...DEFAULT_PERSONALITY_STATE,
-      tendencies: { ...DEFAULT_PERSONALITY_STATE.tendencies },
-      history: [],
-    };
+    this.state = JSON.parse(JSON.stringify(DEFAULT_PERSONALITY_STATE));
+  }
+
+  /**
+   * Serialize to JSON for persistence.
+   */
+  toJSON(): PersonalityState {
+    return this.getState();
+  }
+
+  // -------------------------------------------------------------------------
+  // Private
+  // -------------------------------------------------------------------------
+
+  /**
+   * Classify personality from running totals. O(1).
+   */
+  private reclassify(): void {
+    const t = this.state.tendencies;
+
+    // Not enough data yet
+    if (t.totalInteractions < MIN_INTERACTIONS) {
+      return; // stays balanced
+    }
+
+    const total = t.totalInteractions;
+    const feedRatio = t.feedCount / total;
+    const playRatio = t.playCount / total;
+    const cleanRatio = t.cleanCount / total;
+    const freq = t.interactionFrequency;
+
+    // Classification logic
+    let newType: PersonalityType;
+
+    // Variety: how many distinct action types were actually used
+    const distinctTypes = (t.feedCount > 0 ? 1 : 0) + (t.playCount > 0 ? 1 : 0) + (t.cleanCount > 0 ? 1 : 0);
+
+    // Spammed: very high frequency (>60/hour) with low variety (only 1 action type)
+    // Check first — pure spam pattern (user mashing one button)
+    if (freq > 60 && distinctTypes <= 1) {
+      newType = 'spammed';
+    }
+    // Spoiled: >50% feed, <20% play — check SECOND (specific care pattern)
+    else if (feedRatio > 0.5 && playRatio < 0.2) {
+      newType = 'spoiled';
+    }
+    // Balanced: ratios are roughly even
+    else {
+      newType = 'balanced';
+    }
+
+    // Confidence: ramps from 0 to 1 as interactions go from MIN to MIN*4
+    this.state.confidence = Math.min(1, (total - MIN_INTERACTIONS) / (MIN_INTERACTIONS * 4));
+
+    // Smoothing: only switch after enough consecutive same-type calls.
+    // spammed is a transient state — exit it immediately when pattern changes.
+    if (newType !== this.state.currentType) {
+      const threshold = this.state.currentType === 'spammed' ? 1 : SMOOTHING_THRESHOLD;
+      this.state.history.push(newType);
+      if (this.state.history.length >= threshold) {
+        const recent = this.state.history.slice(-threshold);
+        if (recent.every((h) => h === newType)) {
+          this.state.currentType = newType;
+        }
+      }
+    } else {
+      // Same type, reset history
+      this.state.history = [];
+    }
   }
 }
